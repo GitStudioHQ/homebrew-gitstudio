@@ -1,0 +1,84 @@
+# GitStudio Desktop — Homebrew cask.
+#
+#   brew tap gitstudiohq/gitstudio https://github.com/GitStudioHQ/gitstudio
+#   brew install --cask gitstudiohq/gitstudio/gitstudio
+#
+# The fully-qualified name matters: Homebrew requires third-party taps to be
+# trusted, and a fully-qualified cask on the command line IS the consent
+# (Homebrew::Trust.explicitly_allowed?), so nobody has to learn `brew trust`.
+#
+# Version and checksums are rewritten by .github/workflows/release-desktop.yml
+# on every app-v* tag — the `finalize-release` job reads the real SHA256s off
+# the uploaded assets. Do not hand-edit them; they will be overwritten.
+cask "gitstudio" do
+  version "2.0.0"
+
+  on_arm do
+    sha256 "bb4535913de46de6b568fb2d74fe921a2d32e2e39682cf04860256e37ed769d6"
+    url "https://github.com/GitStudioHQ/gitstudio/releases/download/app-v#{version}/GitStudio-#{version}-arm64.dmg"
+  end
+  on_intel do
+    sha256 "302d686afa527ee2cdf267279f42329241097666c68865190181c2709d3f80f5"
+    url "https://github.com/GitStudioHQ/gitstudio/releases/download/app-v#{version}/GitStudio-#{version}-x64.dmg"
+  end
+
+  name "GitStudio"
+  desc "JetBrains-grade Git client for people who work in Git all day"
+  homepage "https://gitstudio.dev/"
+
+  # The desktop app releases from its own tag in a repo that also tags the
+  # VS Code extension, so match app-v* explicitly.
+  livecheck do
+    url :url
+    regex(/^app-v(\d+(?:\.\d+)+)$/i)
+    strategy :git
+  end
+
+  auto_updates false
+  depends_on macos: :big_sur
+
+  app "GitStudio.app"
+
+  # The build is not signed with a Developer ID, and Homebrew quarantines every
+  # download (the --no-quarantine escape hatch was removed in Homebrew 5). On
+  # macOS 15 and later a quarantined ad-hoc-signed app does not get the
+  # "unidentified developer" prompt — it gets "is damaged and can't be opened",
+  # with no way through. Strip the attribute from what was just installed, which
+  # is what a user would otherwise have to do by hand.
+  #
+  # -s matters: Homebrew tags the framework SYMLINKS themselves, and without -s
+  # xattr follows each link and strips its target instead, leaving fourteen
+  # tagged links inside Electron Framework.framework — enough for Gatekeeper to
+  # keep calling the app damaged with every regular file clean.
+  postflight_steps do
+    run "/usr/bin/xattr", args: ["-d", "-r", "-s", "com.apple.quarantine", "{{appdir}}/GitStudio.app"]
+  end
+
+  zap trash: [
+    "~/Library/Application Support/GitStudio",
+    "~/Library/Preferences/dev.gitstudio.desktop.plist",
+    "~/Library/Saved Application State/dev.gitstudio.desktop.savedState",
+    "~/Library/Logs/GitStudio",
+  ]
+
+  caveats do
+    <<~EOS
+      This build is not signed with an Apple Developer ID yet. The cask clears
+      the quarantine attribute after installing, so it should open normally.
+      If macOS still says the app is damaged, run this once:
+
+        xattr -d -r -s com.apple.quarantine /Applications/GitStudio.app
+
+      If it STILL says damaged, macOS is re-scanning that path because an
+      earlier copy there was refused; a fresh path is not scanned:
+
+        brew reinstall --cask --appdir=~/Applications gitstudio
+
+      If you already had GitStudio in /Applications from a direct download,
+      Homebrew will not overwrite it. Re-run with --force to take it over.
+
+      Prefer the one-line installer, which also verifies the checksum and
+      clears the flag:  curl -fsSL https://gitstudio.dev/install.sh | bash
+    EOS
+  end
+end
