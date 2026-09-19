@@ -1,0 +1,14 @@
+Casks/gitstudio.rb
+  h_d4915c3a77f66e 5-8,10-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "65c4ee4ba3307beb77d7c01181b124d374001f6f",
+  "prompts": {},
+  "humans": {
+    "h_d4915c3a77f66e": {
+      "author": "Anton Arnaudov <anton.arnaudov.me@gmail.com>"
+    }
+  }
+}
